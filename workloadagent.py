@@ -5,8 +5,6 @@
 # Proprietary and confidential.
 # Its use or disclosure, in whole or in part, without
 # written permission of Excelfore Corp. is prohibited.
-#
-
 
 import os
 import subprocess
@@ -27,7 +25,6 @@ import xml.etree.ElementTree as ET
 
 
 # Constants and definitions
-VERIFY_WAIT_FLAG=True
 VERIFY_WAIT_DURATION=5
 KEY_DEPLOYMENT_NAME="deploymentName"
 KEY_CONTAINER="container"
@@ -37,10 +34,14 @@ KEY_CONF_FILENAME="confFilename"
 KEY_HASH="hash"
 
 CHECK_RESULT = ('RET_SUCCESS', # Update deployment successful
+                'RET_INPROGRESS', # Pod status is not yet verified
                 'RET_TIMEOUT', # Timeout occurred before pod status is verified
                 'RET_DIGEST',  # Invalid digest in json file
                 'RET_TAG',     # Invalid image tag in yaml file
                 'RET_ERR')     # General error
+
+# Global config
+retry_wait_run_kubectl_cmd=10
 
 def printlog(message):
     print(message)
@@ -51,32 +52,46 @@ def run_kubectl_cmd(command):
     p = subprocess.run(command, shell=True, stdout=subprocess.PIPE, universal_newlines=True)
     return p.stdout.strip()
 
+def wait_run_kubectl_cmd(command):
+    # kubectl calls may take a while to reflect the expected result, do a few retries
+    for i in range(1,retry_wait_run_kubectl_cmd+1):
+        result = run_kubectl_cmd(command)
+        if result:
+            break
+        else:
+            time.sleep(1)
+            continue
+    return result
+
 def check_container_update(deploymentName, imageTag, waitForRunning, imageDigest):
     result = 'RET_SUCCESS'
     cmd_current_rs_name="kubectl describe deployment %s |grep \"^NewReplicaSet\"|awk '{print $2}'" % (deploymentName)
-    current_rs_name = run_kubectl_cmd(cmd_current_rs_name)
+
+    current_rs_name = wait_run_kubectl_cmd(cmd_current_rs_name)
     if not current_rs_name:
         result = 'RET_ERR'
     else:
         cmd_current_pod_hash_label="kubectl get rs %s -o jsonpath=\"{.metadata.labels.pod-template-hash}\"" % (current_rs_name)
-        current_pod_hash_label = run_kubectl_cmd(cmd_current_pod_hash_label)
+        current_pod_hash_label = wait_run_kubectl_cmd(cmd_current_pod_hash_label)
 
         cmd_current_pod_names="kubectl get pods -l pod-template-hash=%s --show-labels | tail -n +2 | awk '{print $1}'" % (current_pod_hash_label)
-        current_pod_names =run_kubectl_cmd(cmd_current_pod_names)
+        current_pod_names =wait_run_kubectl_cmd(cmd_current_pod_names)
         if not current_pod_names:
             result = 'RET_ERR'
         else:
             cmd_current_pod_image="kubectl get pods/%s -o jsonpath=\"{..containers[*].image}\"" % (current_pod_names)
-            current_pod_image = run_kubectl_cmd(cmd_current_pod_image)
+            current_pod_image = wait_run_kubectl_cmd(cmd_current_pod_image)
 
             # Verify Pod Status
             cmd_current_pod_status="kubectl get -o template pod/%s --template={{.status.phase}}" % (current_pod_names)
-            current_pod_status = run_kubectl_cmd(cmd_current_pod_status)
+            current_pod_status = wait_run_kubectl_cmd(cmd_current_pod_status)
             if current_pod_status != "Running":
                 printlog("WA: Pod is not yet running")
                 if waitForRunning:
                     result = 'RET_TIMEOUT'
-                    return result
+                else:
+                    result = 'RET_INPROGRESS'
+                return result
             else:
                 printlog("WA: Pod is Running")
 
@@ -90,7 +105,7 @@ def check_container_update(deploymentName, imageTag, waitForRunning, imageDigest
 
             # Verify Image ID/Digest
             cmd_current_pod_imageId="kubectl get pods %s  -o jsonpath=\"{..imageID}\"" % (current_pod_names)
-            current_pod_imageId = run_kubectl_cmd(cmd_current_pod_imageId)
+            current_pod_imageId = wait_run_kubectl_cmd(cmd_current_pod_imageId)
             currentTagId = current_pod_imageId.rsplit(':', 3)[-1]
             if imageDigest != "" and imageDigest != currentTagId:
                 printlog("WA: Image Digest mismatch hash=%s current=%s" % (imageDigest, currentTagId))
@@ -103,10 +118,18 @@ def wait_check_container_update(deploymentName, imageTag, imageDigest, timeout):
     result = 'RET_ERR'
     elapsed_sec=0;
     t0 = time.time()
+
+    # If timeout is set, wait for pod running until timeout elapsed
+    # otherwise, try once, then return INSTALL_IN_PROGRESS
+    if timeout == 0:
+        verify_wait_flag = False
+    else:
+        verify_wait_flag = True
+
     while(elapsed_sec <= timeout*60):
-        result = check_container_update(deploymentName, imageTag, VERIFY_WAIT_FLAG, imageDigest)
+        result = check_container_update(deploymentName, imageTag, verify_wait_flag, imageDigest)
         elapsed_sec = time.time() - t0
-        if result == 'RET_SUCCESS':
+        if result == 'RET_SUCCESS' or result == 'RET_INPROGRESS':
             break
         if result == 'RET_TIMEOUT':
             time.sleep(VERIFY_WAIT_DURATION)
@@ -155,6 +178,7 @@ def jsonValidate(workloadList, schemaFile):
 def jsonRun(workloadList, targetdir, timeout):
     retVal = 'RET_ERR'
     failed_items = 0
+    pended_items = 0
     for item in workloadList:
         if KEY_HASH in item:
             hash=item[KEY_HASH]
@@ -180,30 +204,39 @@ def jsonRun(workloadList, targetdir, timeout):
         else:
             printlog("WA: Item is invalid")
             retVal = 'RET_ERR'
-        if retVal != 'RET_SUCCESS':
+
+        # Check update result and count accordingly
+        if retVal == 'RET_INPROGRESS':
+            pended_items+=1
+        elif retVal != 'RET_SUCCESS':
             failed_items+=1
+
+        # Check if we need to timeout
         if retVal == 'RET_TIMEOUT':
             printlog("WA: Update timed out")
             break
-    return failed_items
+
+    if failed_items == 0 and pended_items == 0:
+        status = 'INSTALL_COMPLETED'
+    elif failed_items == 0 and pended_items > 0:
+        status = 'INSTALL_IN_PROGRESS'
+    else:
+        status = 'INSTALL_FAILED'
+    return status
 
 def jsonLoad(jsonFilename, install_target, schemaFile, timeout):
-    retVal=False
+    update_status='INSTALL_FAILED'
     with open(jsonFilename, "r") as read_file:
         jsonData = json.load(read_file)
         read_file.close()
 
         if jsonValidate(jsonData, schemaFile):
-            result = jsonRun(jsonData, install_target, timeout)
-            if result==0:
-                printlog("WA: Successfully updated deployments")
-                retVal=True
-            else:
-                printlog("WA: Failed to update deployments")
+            update_status = jsonRun(jsonData, install_target, timeout)
         else:
             printlog("WA: workload list is not valid")
 
-    return retVal
+    printlog("WA: Update status=%s" % (update_status))
+    return update_status
 
 def manifestLoad(manifestFile):
     xmltree = ET.parse(manifestFile)
@@ -231,7 +264,7 @@ class WorkloadAgent(eSyncUA):
         return 'INSTALL_IN_PROGRESS'
 
     def do_install(self, version, packageFile):
-        retval = False
+        update_status = 'INSTALL_FAILED'
         printlog("WA: do_install version: %s with %s" % (version, packageFile))
         filename = self.cache + os.sep + os.path.basename(packageFile)
         install_target = self.instdir + os.sep + os.path.basename(packageFile)
@@ -249,13 +282,9 @@ class WorkloadAgent(eSyncUA):
                 zip_payload.extractall(install_target)
 
             for name in glob.glob(install_target + os.sep + "*.json"):
-                retval = jsonLoad(name, install_target, self.schema, self.mtimeout)
+                update_status = jsonLoad(name, install_target, self.schema, self.mtimeout)
 
-        if not retval:
-            status = "INSTALL_FAILED"
-        else:
-            status = 'INSTALL_COMPLETED'
-        return status
+        return update_status
 
     def do_post_install(self, packageName):
         printlog("WA: do_post_install %s" % (packageName))
@@ -347,6 +376,8 @@ if __name__ == "__main__":
                       action="store", dest="json", help="workload agent schema file", metavar="JSON")
     parser.add_option("-m", "--mtimeout", default=5, type='int',
                       action="store", dest="mtimeout", help="mtimeout (default=5 minutes)")
+    parser.add_option("-r", "--retries", default=10, type='int',
+                      action="store", dest="retries", help="retries for kubectl calls (default=10)")
     parser.add_option('-d', '--debug', default=3, action='store', type='int',
                       help="debug level(3), 1=ERROR, 2=WARN, 3=INFO, 4=DEBUG", metavar="LVL")
     (options, args) = parser.parse_args()
@@ -371,6 +402,7 @@ if __name__ == "__main__":
     workloadagent.instdir    = options.wa_dir
     workloadagent.schema    = options.json
     workloadagent.mtimeout = options.mtimeout
+    retry_wait_run_kubectl_cmd = options.retries
 
     if not os.path.exists(workloadagent.instdir):
         os.makedirs(workloadagent.instdir)
@@ -382,4 +414,3 @@ if __name__ == "__main__":
         os.makedirs(workloadagent.backup)
 
     workloadagent.run_forever()
-ever()

@@ -5,7 +5,6 @@
 # Proprietary and confidential.
 # Its use or disclosure, in whole or in part, without
 # written permission of Excelfore Corp. is prohibited.
-#
 
 import workloadagent
 import sys

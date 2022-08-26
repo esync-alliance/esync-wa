@@ -2,8 +2,8 @@
 
 ### Overview
 
-The workload agent is an eSync update agent that uses kubectl CLIs to pull docker images and deploy them to the kubernetes cluster. The workload agent registers to the eSync client, which is running in its own container in the k3s cluster. 
-The eSync client connects to the eSync server via secure network connection. When a campaign is deployed from the eSync server, the eSync client invokes various callback functions of the workload agent to download, install, and do other update-related operations for the kubernetes cluster. 
+The workload agent is an eSync update agent that uses kubectl CLIs to pull docker images and deploy them to the kubernetes cluster. The workload agent registers to the eSync client, which is running in its own container in the k3s cluster.
+The eSync client connects to the eSync server via secure network connection. When a campaign is deployed from the eSync server, the eSync client invokes various callback functions of the workload agent to download, install, and do other update-related operations for the kubernetes cluster.
 The component package that is downloaded from the eSync server contains JSON file which lists the kubernetes YAML files to update, as well as the YAML files referenced in the JSON file.
 The docker image that is referenced in the YAML files are pulled from the docker repository, not from the eSync server.
 
@@ -29,15 +29,15 @@ eSync python-libua Library APIs serve as callback methods. eSync agent python de
 The workloadagent.py python script is the implementation of the workload agent, which uses eSyncUA class from esyncua.py to interface with the eSync Agent C library.
 
 ##### Callback Methods
-            
+
 * `do_init()`
     + [Optional] Interface to allow device specific initialization, this is
     called before initializing xl4bus.
-    Use this function to customize device  initialization before starting the update agent. 
+    Use this function to customize device  initialization before starting the update agent.
     + Args: None
     + Returns: None
 * `do_confirm_download(pkgName, version)`
-    + [Optional] Interface to confirm/deny download after UA receives `xl4.ready-download` message        
+    + [Optional] Interface to confirm/deny download after UA receives `xl4.ready-download` message
     + Args:
         - `pkgName`: Component package name.
         - `version`: version string.
@@ -54,7 +54,7 @@ The workloadagent.py python script is the implementation of the workload agent, 
         - Subclass shall return one of the status strings `"INSTALL_IN_PROGRESS", "INSTALL_FAILED"`
         - Default is `INSTALL_IN_PROGRESS`
 * `do_install(version, packageFile)`
-    + [Required] Interface to start updating after do_pre_install() upon receiving xl4.ready-update message.  
+    + [Required] Interface to start updating after do_pre_install() upon receiving xl4.ready-update message.
     + Args:
         - `downloadFileStr`: Full pathname of the installation package file.
     + Returns:
@@ -81,7 +81,7 @@ The workloadagent.py python script is the implementation of the workload agent, 
     + Returns:
         - `int`: 0 for success, 1 for error.
 * `do_prepare_install(packageName, version, packageFile)`
-    + [Optional] Interface to allow UA to manage `packageFile` after receiving `xl4.prepare-update`. 
+    + [Optional] Interface to allow UA to manage `packageFile` after receiving `xl4.prepare-update`.
         e.g. A system might need to copy `packageFile` to a specific directory. In such case, UA shall return the new pathname, which will be passed to do_install.
     + Args:
         - `packageName(str)`: Component package name.
@@ -106,10 +106,10 @@ The workloadagent.py python script is the implementation of the workload agent, 
     + Args: None
     + Returns
         - 0 for Success, 1 for Failure.
-        
+
 ##### Arguments to Workload Agent Script
 
-* The following arguments can be passed to `workloadagent.py`:          
+* The following arguments can be passed to `workloadagent.py`:
     + `cert(str)`: Top directory of UA certificates
     + `type(str)`: Type of end device (ECU) for which a custom agent has been developed
     + `host(str)`: Host url where eSync client is running
