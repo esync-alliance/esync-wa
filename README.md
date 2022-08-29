@@ -126,6 +126,18 @@ The workloadagent.py python script is the implementation of the workload agent, 
     + `json(str)`: Path to workload agent schema JSON file
     + `debug(str)`: Unused
 
+#### Dependencies
+
+This package depends on the following python modules:
+    + pylibua
+    + optparse
+    + json
+    + jsonschema
+    + subprocess
+    + sys
+    + zipfile
+    + glob
+    + yaml
 
 ### Contents of the Component Package
 
@@ -143,3 +155,4 @@ Refer to the docs/TestNotes.pdf file of `meta-xl4esync-soafee` layer to learn ho
 #### Demo Test Setup
 
 Refer to the TestNotes.pdf file to learn how to setup the Demo Setup test environment.
+

@@ -1,0 +1,53 @@
+{
+    "title": "WorkLoadAgentList",
+    "description" : "List of deployment objects or config files to update",
+    "type": "array",
+    "items": {
+        "anyOf": [
+            {
+                "title": "deployment",
+                "description" : "deployment object to update",
+                "type": "object",
+                "properties": {
+                    "deploymentName": {
+                        "type": "string",
+                        "description": "Deployment Name"
+                    },
+                    "container": {
+                        "type": "string",
+                        "description": "Container Name"
+                    },
+                    "imageName": {
+                        "description": "imageName",
+                        "type": "string"
+                    },
+                    "imageTag": {
+                        "description": "imageTag",
+                        "type": "string"
+                    },
+                    "hash": {
+                        "description": "hash to verify the deployment image",
+                        "type": "string"
+                    }
+                },
+                "required": [ "deploymentName", "container", "imageName", "imageTag" ]
+            },
+            {
+                "title": "configuration",
+                "description" : "configuration object to apply",
+                "type": "object",
+                "properties": {
+                    "confFilename": {
+                        "type": "string",
+                        "description": "Configuration File Name (yaml)"
+                    },
+                    "hash": {
+                        "description": "hash to verify the configuration file",
+                        "type": "string"
+                    }
+                },
+                "required": [ "confFilename" ]
+            }
+        ]
+    }
+}

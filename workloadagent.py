@@ -374,10 +374,10 @@ if __name__ == "__main__":
                       action="store", dest="wa_dir", help="workload agent install dir", metavar="WA")
     parser.add_option("-j", "--json", default='/usr/share/wa/wa-schema.json', type='string',
                       action="store", dest="json", help="workload agent schema file", metavar="JSON")
-    parser.add_option("-m", "--mtimeout", default=5, type='int',
-                      action="store", dest="mtimeout", help="mtimeout (default=5 minutes)")
-    parser.add_option("-r", "--retries", default=10, type='int',
-                      action="store", dest="retries", help="retries for kubectl calls (default=10)")
+    parser.add_option("-m", "--mtimeout", default=0, type='int',
+                      action="store", dest="mtimeout", help="mtimeout (default=0, no timeout)")
+    parser.add_option("-r", "--retries", default=30, type='int',
+                      action="store", dest="retries", help="retries for kubectl calls (default=30)")
     parser.add_option('-d', '--debug', default=3, action='store', type='int',
                       help="debug level(3), 1=ERROR, 2=WARN, 3=INFO, 4=DEBUG", metavar="LVL")
     (options, args) = parser.parse_args()
