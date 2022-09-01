@@ -145,7 +145,7 @@ The workloadagent.py python script is the implementation of the workload agent, 
 
 #### Dependencies
 
-This package depends on the following python modules:
+* This package depends on the following python modules:
     + pylibua
     + optparse
     + json

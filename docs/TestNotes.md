@@ -183,6 +183,3 @@ end-node       ...   end-node       excelforejp.com:5050/xl4esync/esync_batch/en
 journalctl -f -u esync-workload-agent.service
 ```
 
-##### Checking the logs of the workload agent
-
-The workload agent is automatically 
