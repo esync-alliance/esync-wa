@@ -130,7 +130,7 @@ The workloadagent.py python script is the implementation of the workload agent, 
     + `debug(str)`: Unused
 
 * Configuration notes:
-    + [Note1]: To reduce the time for overall OTA update, timeout can be disabled by esyncrun.conf (`"-m","0"`). 
+    + [Note1]: To reduce the time for overall OTA update, timeout can be disabled by esyncrun.conf (`"-m","0"`).
         - In this configuration, the deployments are attempted in parallel, and the workload agent does not wait with timeout.
         - When some pods are not yet running, the workload agent returns INSTALL_IN_PROGRESS.
         - The update retries until all the pods are running, in which case, INSTALL_COMPLETED is returned.
@@ -169,10 +169,8 @@ Refer to the docs/TestNotes.pdf file to learn how to create the Component Packag
   3. Request Access to the Excelfore Docker Registry.
   4. User certificate to Upload component and create campaign in eSync server.
   5. Login access to the Excelfore Docker Registry.
-  
+
 #### Demo Test Setup
 
 Refer to the docs/TestNotes.pdf file to learn how to setup the Demo Setup test environment.
-
-vironment.
 
