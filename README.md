@@ -9,7 +9,7 @@ The docker image that is referenced in the YAML files are pulled from the docker
 
 ### Build Environment Setup
 
-Refer to the README.md file of `meta-xl4esync-soafee` layer to learn how to create the Demo Setup for SOAFEE Workload agent.
+Refer to the README.md file of `meta-ewaol-esync` layer to learn how to create the Demo Setup for SOAFEE Workload agent.
 Contact an Excelfore representative for access to the Excelfore Demo Setup for SOAFEE.
 
 ### Workload Agent

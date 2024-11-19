@@ -2,7 +2,7 @@
 title: "eSync OTA on SOAFEE Test Plan"
 output:
 pdf_document:
-path: draft_esync_ota_on_soafee_test_plan.pdf
+path: TestNotes.pdf
 ---
 
 #### eSync OTA on SOAFEE Test Report
